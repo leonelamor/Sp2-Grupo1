@@ -13,6 +13,7 @@
 LiquidCrystal myLcd(A0, A1, A2, A3, A4, 5);
 int nivel = 0;
 int tempAnterior;
+int nivelAnterior;
 bool sono_buffer; 
 char estadoTostadora[20];
 
@@ -51,14 +52,6 @@ void prederLed(int led){
   digitalWrite(led, HIGH);
 }
 
-void sonarBuzzer(int repeticiones){
-  for (int i = 0; i < repeticiones; i += 1){
-    digitalWrite(pinBuzzer,HIGH);
-    delay(500);
-    digitalWrite(pinBuzzer,LOW);
-    delay(500);
-  }
-}
 
 
 void loop(){
@@ -72,50 +65,76 @@ void loop(){
   	nivel = 4;
   }
   
-  Serial.println(nivel);
   
-  int temperatura = map(analogRead(SENSOR_TPM), 20, 350, 0, 49);
+  int temperatura = map(analogRead(SENSOR_TPM), 20, 350, -40, 125);
   
   if(nivel == 1){
-      	prederLed(AZUL);
-    	sono_buffer = false;
-    	strcpy(estadoTostadora, "Sin hacer");
-    } else if(nivel == 2){
-      	prederLed(VERDE);
-      	temperatura = map(analogRead(SENSOR_TPM), 20, 350, 50, 99);
-      	sono_buffer = false;
-       	strcpy(estadoTostadora, "Hecha");
-    } else if(nivel == 3){
-      	prederLed(VERDE);
-      	temperatura = map(analogRead(SENSOR_TPM), 20, 350, 100, 149);
-      	sono_buffer = false;
-        strcpy(estadoTostadora, "Hecha");
-    } else if(nivel == 4) {
-      	prederLed(ROJO);
-      	temperatura = map(analogRead(SENSOR_TPM), 20, 350, 150, 199);
-        strcpy(estadoTostadora, "Quemada");
-    	if(!sono_buffer){
-      		sonarBuzzer(3);
-   			sono_buffer = true;
-    	}
-    }
- if(tempAnterior != temperatura){
-  	myLcd.clear();
-    tempAnterior = temperatura;
+    controlarEstadoTostada(0,10,temperatura);
+  }else if(nivel == 2){
+    controlarEstadoTostada(20,30,temperatura);
+  }else if(nivel == 3){
+    controlarEstadoTostada(40,60,temperatura);
+  }else if(nivel == 4){
+    controlarEstadoTostada(80,110,temperatura);
+  }
+   
+  
+ if(tempAnterior != temperatura || nivelAnterior != nivel){
+   myLcd.clear();
+   if (nivelAnterior != nivel && strcmp(estadoTostadora, "Quemada") == 0)
+   {
+     sono_buffer = false;
+   }
+   tempAnterior = temperatura;
+   nivelAnterior = nivel;
  }
   
   char lcdLine1[20];
   char lcdLine2[20];
-
-
-  
   sprintf(lcdLine1,"Nivel %d", nivel);
   sprintf(lcdLine2,"%s", estadoTostadora);
 
-  
-  //Serial.println(lcdLine);
   myLcd.setCursor(0,0);
   myLcd.print(lcdLine1);
   myLcd.setCursor(0,1);
   myLcd.print(lcdLine2);
+  
+  
+  if (strcmp(estadoTostadora, "Quemada") != 0)
+  {
+    sono_buffer = false;
+    
+  }else if(!sono_buffer)
+  {
+    sonarBuzzer(3);
+    sono_buffer = true;
+  }
+}
+
+
+void sonarBuzzer(int repeticiones){
+  for (int i = 0; i < repeticiones; i += 1){
+    digitalWrite(pinBuzzer,HIGH);
+    delay(500);
+    digitalWrite(pinBuzzer,LOW);
+    delay(500);
+  }
+}
+
+
+void controlarEstadoTostada(int tempUno, int tempDos, int temperatura)
+{
+  if (temperatura < tempUno)
+  {
+    prederLed(AZUL);
+    strcpy(estadoTostadora, "Sin hacer");
+  }else if (temperatura < tempDos)
+  {
+    prederLed(VERDE);
+    strcpy(estadoTostadora, "Hecha");
+  }else
+  {
+    prederLed(ROJO);
+    strcpy(estadoTostadora, "Quemada");
+  }
 }
